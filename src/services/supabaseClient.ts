@@ -1,31 +1,93 @@
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import { UserProfile } from '../types';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const getStoredConfig = () => {
+  const envUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const envKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-// Import the raw schema for 1-click clipboard copying in SetupChecker and SupabaseDeployGuide
-// @ts-ignore
-import rawSchema from '../../supabase/migrations/001_schema.sql?raw';
-export const SUPABASE_SQL_SCHEMA: string = rawSchema || '';
+  let localUrl = '';
+  let localKey = '';
+  try {
+    localUrl = localStorage.getItem('collegeconnect_supabase_url') || '';
+    localKey = localStorage.getItem('collegeconnect_supabase_anon_key') || '';
+  } catch {
+    // ignore
+  }
 
-export const isSupabaseConfigured = Boolean(
-  supabaseUrl && 
-  supabaseAnonKey && 
-  supabaseUrl.trim() !== '' && 
-  supabaseAnonKey.trim() !== '' &&
-  !supabaseUrl.includes('placeholder') &&
-  !supabaseUrl.includes('your-project')
+  const effectiveUrl = (envUrl && !envUrl.includes('your-project') && !envUrl.includes('placeholder'))
+    ? envUrl
+    : localUrl;
+
+  const effectiveKey = (envKey && !envKey.includes('your-anon') && !envKey.includes('placeholder'))
+    ? envKey
+    : localKey;
+
+  return {
+    url: effectiveUrl ? effectiveUrl.trim() : '',
+    anonKey: effectiveKey ? effectiveKey.trim() : '',
+    isCustom: Boolean(localUrl && (!envUrl || envUrl.includes('your-project')))
+  };
+};
+
+const activeConfig = getStoredConfig();
+
+export let isSupabaseConfigured = Boolean(
+  activeConfig.url && 
+  activeConfig.anonKey && 
+  activeConfig.url.trim() !== '' && 
+  activeConfig.anonKey.trim() !== '' &&
+  !activeConfig.url.includes('placeholder') &&
+  !activeConfig.url.includes('your-project')
 );
 
-export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(supabaseUrl!, supabaseAnonKey!, {
+export let supabase: SupabaseClient | null = isSupabaseConfigured
+  ? createClient(activeConfig.url, activeConfig.anonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true
       }
     })
   : null;
+
+export function saveCustomSupabaseConfig(url: string, anonKey: string): boolean {
+  try {
+    localStorage.setItem('collegeconnect_supabase_url', url.trim());
+    localStorage.setItem('collegeconnect_supabase_anon_key', anonKey.trim());
+    isSupabaseConfigured = true;
+    supabase = createClient(url.trim(), anonKey.trim(), {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true
+      }
+    });
+    return true;
+  } catch (err) {
+    console.error('Failed to save Supabase config in localStorage', err);
+    return false;
+  }
+}
+
+export function clearCustomSupabaseConfig(): void {
+  try {
+    localStorage.removeItem('collegeconnect_supabase_url');
+    localStorage.removeItem('collegeconnect_supabase_anon_key');
+    const fallback = getStoredConfig();
+    if (fallback.url && fallback.anonKey) {
+      supabase = createClient(fallback.url, fallback.anonKey);
+      isSupabaseConfigured = true;
+    } else {
+      supabase = null;
+      isSupabaseConfigured = false;
+    }
+  } catch (err) {
+    console.error('Failed to clear Supabase config', err);
+  }
+}
+
+export function getActiveSupabaseConfig() {
+  return getStoredConfig();
+}
+
 
 export const REQUIRED_TABLES = [
   'settings',
@@ -56,12 +118,18 @@ export interface SetupStatus {
   isAdmin: boolean;
 }
 
+// Import the raw schema for 1-click clipboard copying in SetupChecker and SupabaseDeployGuide
+// @ts-ignore
+import rawSchema from '../../supabase/migrations/001_schema.sql?raw';
+export const SUPABASE_SQL_SCHEMA: string = rawSchema || '';
+
 export async function checkDatabaseSetup(): Promise<SetupStatus> {
+  const current = getStoredConfig();
   const missingEnvVars: string[] = [];
-  if (!supabaseUrl || supabaseUrl.trim() === '' || supabaseUrl.includes('your-project')) {
+  if (!current.url || current.url.trim() === '' || current.url.includes('your-project')) {
     missingEnvVars.push('VITE_SUPABASE_URL');
   }
-  if (!supabaseAnonKey || supabaseAnonKey.trim() === '' || supabaseAnonKey.includes('your-anon')) {
+  if (!current.anonKey || current.anonKey.trim() === '' || current.anonKey.includes('your-anon')) {
     missingEnvVars.push('VITE_SUPABASE_ANON_KEY');
   }
 

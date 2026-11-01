@@ -6,13 +6,21 @@ import {
   Database,
   ExternalLink,
   KeyRound,
+  Link,
   Play,
   RefreshCw,
   ShieldAlert,
   Terminal,
+  Trash2,
   UserCheck
 } from 'lucide-react';
-import { SetupStatus, SUPABASE_SQL_SCHEMA } from '../services/supabaseClient';
+import {
+  SetupStatus,
+  SUPABASE_SQL_SCHEMA,
+  saveCustomSupabaseConfig,
+  clearCustomSupabaseConfig,
+  getActiveSupabaseConfig
+} from '../services/supabaseClient';
 
 interface SetupCheckerProps {
   status: SetupStatus;
@@ -31,8 +39,12 @@ export const SetupChecker: React.FC<SetupCheckerProps> = ({
 }) => {
   const [copiedSQL, setCopiedSQL] = useState(false);
   const [copiedAdminSQL, setCopiedAdminSQL] = useState(false);
+  const currentConfig = getActiveSupabaseConfig();
+  const [inputUrl, setInputUrl] = useState(currentConfig.url || '');
+  const [inputKey, setInputKey] = useState(currentConfig.anonKey || '');
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const adminEmail = status.currentUser?.email || 'your_email@example.com';
+  const adminEmail = status.currentUser?.email || 'avrendrakumar2006@gmail.com';
   const makeAdminSQL = `UPDATE public.profiles SET role = 'admin' WHERE id = (SELECT id FROM auth.users WHERE email = '${adminEmail}');`;
 
   const copyMigrationPath = () => {
@@ -45,6 +57,22 @@ export const SetupChecker: React.FC<SetupCheckerProps> = ({
     navigator.clipboard.writeText(makeAdminSQL);
     setCopiedAdminSQL(true);
     setTimeout(() => setCopiedAdminSQL(false), 2000);
+  };
+
+  const handleSaveCredentials = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputUrl.trim() || !inputKey.trim()) return;
+    saveCustomSupabaseConfig(inputUrl.trim(), inputKey.trim());
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2500);
+    onRefresh();
+  };
+
+  const handleClearCredentials = () => {
+    clearCustomSupabaseConfig();
+    setInputUrl('');
+    setInputKey('');
+    onRefresh();
   };
 
   return (
@@ -71,7 +99,7 @@ export const SetupChecker: React.FC<SetupCheckerProps> = ({
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
               {status.missingEnvVars.length > 0
-                ? 'The environment variables for your Supabase project are not configured.'
+                ? 'Connect your Supabase project using the instant form below or via your .env file.'
                 : status.currentUser && !status.isAdmin
                 ? `You are currently authenticated as "${adminEmail}" with the role "student". Database Row Level Security (RLS) requires "admin" role to make changes.`
                 : 'Your Supabase project is connected, but the required tables and Row Level Security policies have not been created yet.'}
@@ -79,23 +107,76 @@ export const SetupChecker: React.FC<SetupCheckerProps> = ({
           </div>
         </div>
 
-        {/* Missing Env Variables Alert */}
-        {status.missingEnvVars.length > 0 && (
-          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-300">
-              <AlertTriangle className="w-4 h-4" />
-              <span>Missing Environment Variables:</span>
+        {/* Quick Connect Form */}
+        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+              <Link className="w-4 h-4 text-indigo-500" />
+              <span>Connect Supabase Project (Instant In-Browser Setup)</span>
             </div>
-            <ul className="list-disc list-inside text-xs font-mono text-rose-800 dark:text-rose-200 space-y-1">
-              {status.missingEnvVars.map((v) => (
-                <li key={v}>{v}</li>
-              ))}
-            </ul>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
-              Add them to your local <code className="font-mono text-indigo-500 font-semibold">.env</code> file or deployment host (Vercel / Netlify) using values from your Supabase Dashboard &gt; Project Settings &gt; API.
-            </p>
+            {currentConfig.isCustom && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                Connected via Browser
+              </span>
+            )}
           </div>
-        )}
+
+          <form onSubmit={handleSaveCredentials} className="space-y-3">
+            <div>
+              <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                Project URL (from Supabase Dashboard &gt; Project Settings &gt; API)
+              </label>
+              <input
+                type="text"
+                placeholder="https://your-project-id.supabase.co"
+                value={inputUrl}
+                onChange={(e) => setInputUrl(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl text-xs font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                Project Anon Key (public "anon" key)
+              </label>
+              <input
+                type="password"
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                value={inputKey}
+                onChange={(e) => setInputKey(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl text-xs font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition"
+                >
+                  {saveSuccess ? <Check className="w-3.5 h-3.5" /> : <Link className="w-3.5 h-3.5" />}
+                  <span>{saveSuccess ? 'Saved & Connected!' : 'Save & Connect'}</span>
+                </button>
+
+                {currentConfig.isCustom && (
+                  <button
+                    type="button"
+                    onClick={handleClearCredentials}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Clear</span>
+                  </button>
+                )}
+              </div>
+
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                Or set in <code className="font-mono text-indigo-500 font-semibold">.env</code>
+              </span>
+            </div>
+          </form>
+        </div>
+
 
         {/* Missing Tables List */}
         {status.missingTables.length > 0 && status.missingEnvVars.length === 0 && (

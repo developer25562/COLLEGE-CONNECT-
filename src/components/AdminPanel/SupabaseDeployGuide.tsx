@@ -83,8 +83,8 @@ export const SupabaseDeployGuide: React.FC = () => {
         </p>
 
         <div className="p-3.5 rounded-xl bg-slate-950 font-mono text-xs text-teal-300 border border-slate-800 space-y-1">
-          <div>VITE_SUPABASE_URL="https://your-project.supabase.co"</div>
-          <div>VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6..."</div>
+          <div>VITE_SUPABASE_URL="https://sqsjgmhzrainnulcbebr.supabase.co"</div>
+          <div>VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxc2pnbWh6cmFpbm51bGNiZWJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1NDEzMDEsImV4cCI6MjEwOTExNzMwMX0.T3dCZ3ZRHBqngAz0j7_n3CXGWjKTNRPIb3LszYrBpGM"</div>
         </div>
       </div>
 
