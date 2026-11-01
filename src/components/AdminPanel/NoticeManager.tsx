@@ -21,12 +21,14 @@ export const NoticeManager: React.FC<NoticeManagerProps> = ({
   const [priority, setPriority] = useState<'normal' | 'urgent' | 'info'>('urgent');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [closesCollege, setClosesCollege] = useState(false);
 
   const openAdd = () => {
     setEditingNotice(null);
     setTitle('');
     setContent('');
     setPriority('urgent');
+    setClosesCollege(false);
     const todayStr = new Date().toISOString().split('T')[0];
     setStartDate(todayStr);
     setEndDate(todayStr);
@@ -40,6 +42,7 @@ export const NoticeManager: React.FC<NoticeManagerProps> = ({
     setPriority(n.priority);
     setStartDate(n.startDate);
     setEndDate(n.endDate);
+    setClosesCollege(Boolean(n.closes_college));
     setShowModal(true);
   };
 
@@ -56,7 +59,9 @@ export const NoticeManager: React.FC<NoticeManagerProps> = ({
               content: content.trim(),
               priority,
               startDate,
-              endDate
+              endDate,
+              is_emergency: closesCollege || priority === 'urgent',
+              closes_college: closesCollege
             }
           : n
       );
@@ -70,7 +75,9 @@ export const NoticeManager: React.FC<NoticeManagerProps> = ({
         priority,
         startDate,
         endDate,
-        active: true
+        active: true,
+        is_emergency: closesCollege || priority === 'urgent',
+        closes_college: closesCollege
       };
       onSaveNotices([newNotice, ...notices]);
       onShowToast(`Posted new announcement!`, 'success');
@@ -235,6 +242,27 @@ export const NoticeManager: React.FC<NoticeManagerProps> = ({
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
                   />
                 </div>
+              </div>
+
+              {/* Emergency Closure Option */}
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={closesCollege}
+                    onChange={(e) => setClosesCollege(e.target.checked)}
+                    className="mt-0.5 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                  />
+                  <div>
+                    <div className="text-xs font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>Emergency Closure: Closes College Immediately</span>
+                    </div>
+                    <div className="text-[11px] text-rose-600 dark:text-rose-400 mt-0.5">
+                      Overrides the timetable and marks the college as CLOSED campus-wide with an emergency banner until resolved.
+                    </div>
+                  </div>
+                </label>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">

@@ -34,10 +34,10 @@ export const TopNav: React.FC<TopNavProps> = ({
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white leading-none">
-              CampusPulse
+              College Connect
             </span>
             <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 tracking-wider uppercase mt-0.5">
-              Institute Schedule
+              Institute Schedule &amp; Routine
             </span>
           </div>
         </div>

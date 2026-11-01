@@ -9,7 +9,7 @@ import {
   Sparkles,
   ArrowRight
 } from 'lucide-react';
-import { CollegeStatus, minutesToTimeString } from '../utils/timeEngine';
+import { CollegeStatus, minutesToTimeString, SCHEDULED_STATUS_DISCLAIMER } from '../utils/timeEngine';
 import { Period } from '../types';
 
 interface HeroBannerProps {
@@ -264,6 +264,12 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Scheduled Status Disclaimer Banner */}
+        <div className="pt-3 border-t border-indigo-900/40 text-[11px] text-slate-400 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <span>{SCHEDULED_STATUS_DISCLAIMER}</span>
+          <span className="font-mono text-[10px] text-indigo-400/80">Timezone: Asia/Kolkata (IST)</span>
         </div>
       </div>
     </div>

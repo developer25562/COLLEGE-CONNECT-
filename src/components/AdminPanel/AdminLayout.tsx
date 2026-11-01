@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import {
   Bell,
   Calendar,
+  Clock,
   Database,
   DoorOpen,
   FileSpreadsheet,
+  History,
   Lock,
   LogOut,
   RotateCcw,
+  Settings,
   ShieldCheck,
   Table2,
   Zap,
@@ -15,6 +18,9 @@ import {
 } from 'lucide-react';
 import { UploadZone } from './UploadZone';
 import { TimetableEditor } from './TimetableEditor';
+import { MasterDataManager } from './MasterDataManager';
+import { PeriodsManager } from './PeriodsManager';
+import { SettingsManager } from './SettingsManager';
 import { RoomManager } from './RoomManager';
 import { HolidayManager } from './HolidayManager';
 import { NoticeManager } from './NoticeManager';
@@ -74,8 +80,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   const [password, setPassword] = useState('admin123');
   const [authLoading, setAuthLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    'upload' | 'timetable' | 'rooms' | 'holidays' | 'notices' | 'overrides' | 'deploy'
+    'upload' | 'timetable' | 'master_data' | 'periods' | 'holidays' | 'notices' | 'settings' | 'history' | 'overrides' | 'deploy'
   >('upload');
+  const [collegeSettings, setCollegeSettings] = useState(() => storageService.getSettings());
+  const [uploadHistory, setUploadHistory] = useState(() => storageService.getUploadHistory());
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -245,7 +253,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           }`}
         >
           <FileSpreadsheet className="w-4 h-4" />
-          <span>Upload Excel</span>
+          <span>Upload</span>
         </button>
 
         <button
@@ -257,19 +265,31 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           }`}
         >
           <Table2 className="w-4 h-4" />
-          <span>Timetable Editor</span>
+          <span>Timetable</span>
         </button>
 
         <button
-          onClick={() => setActiveTab('rooms')}
+          onClick={() => setActiveTab('master_data')}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${
-            activeTab === 'rooms'
+            activeTab === 'master_data'
               ? 'bg-indigo-600 text-white shadow-sm'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
           <DoorOpen className="w-4 h-4" />
-          <span>Rooms &amp; Facilities</span>
+          <span>Rooms &amp; Master Data</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('periods')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+            activeTab === 'periods'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Periods</span>
         </button>
 
         <button
@@ -293,7 +313,31 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           }`}
         >
           <Bell className="w-4 h-4" />
-          <span>Notices Ticker</span>
+          <span>Notices</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+            activeTab === 'settings'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Settings className="w-4 h-4" />
+          <span>Settings</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+            activeTab === 'history'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <History className="w-4 h-4" />
+          <span>Upload History</span>
         </button>
 
         <button
@@ -305,7 +349,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           }`}
         >
           <Zap className="w-4 h-4" />
-          <span>Quick Overrides</span>
+          <span>Overrides</span>
         </button>
 
         <button
@@ -317,7 +361,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           }`}
         >
           <Database className="w-4 h-4" />
-          <span>Database &amp; Deploy</span>
+          <span>Database SQL</span>
         </button>
       </div>
 
@@ -329,7 +373,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             periods={periods}
             timetable={timetable}
             holidays={holidays}
-            onDataImported={(data) => onDataUpdated(data)}
+            onDataImported={(data) => {
+              onDataUpdated(data);
+              setUploadHistory(storageService.getUploadHistory());
+            }}
             onShowToast={onShowToast}
           />
         )}
@@ -348,12 +395,28 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           />
         )}
 
-        {activeTab === 'rooms' && (
-          <RoomManager
+        {activeTab === 'master_data' && (
+          <MasterDataManager
             rooms={rooms}
+            branches={branches}
             onSaveRooms={(updated) => {
               storageService.saveRooms(updated);
               onDataUpdated({ rooms: updated });
+            }}
+            onSaveBranches={(updated) => {
+              storageService.saveBranches(updated);
+              onDataUpdated({ branches: updated });
+            }}
+            onShowToast={onShowToast}
+          />
+        )}
+
+        {activeTab === 'periods' && (
+          <PeriodsManager
+            periods={periods}
+            onSavePeriods={(updated) => {
+              storageService.savePeriods(updated);
+              onDataUpdated({ periods: updated });
             }}
             onShowToast={onShowToast}
           />
@@ -379,6 +442,94 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             }}
             onShowToast={onShowToast}
           />
+        )}
+
+        {activeTab === 'settings' && (
+          <SettingsManager
+            settings={collegeSettings}
+            onSaveSettings={(updated) => {
+              storageService.saveSettings(updated);
+              setCollegeSettings(updated);
+            }}
+            onShowToast={onShowToast}
+          />
+        )}
+
+        {activeTab === 'history' && (
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <History className="w-5 h-5 text-indigo-500" />
+                  <span>Upload History &amp; 1-Click Rollback (Last 5 Uploads)</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Inspect every Excel synchronization and instantly undo any of the last 5 uploads to restore database snapshots.
+                </p>
+              </div>
+              <button
+                onClick={() => setUploadHistory(storageService.getUploadHistory())}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+              >
+                Refresh Log
+              </button>
+            </div>
+
+            {uploadHistory.length === 0 ? (
+              <div className="py-12 text-center text-xs text-slate-400">
+                No uploads recorded yet. Upload an Excel spreadsheet from the "Upload" tab to see history and rollback snapshots here.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                {uploadHistory.map((item) => (
+                  <div key={item.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>{item.fileName}</span>
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                          Mode: {item.mode}
+                        </span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          Synced
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-1">
+                        {new Date(item.timestamp).toLocaleString()} · {item.counts.timetable} classes, {item.counts.rooms} rooms, {item.counts.holidays} holidays, {item.counts.periods} periods
+                      </div>
+                    </div>
+
+                    {item.previousSnapshot && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Undo upload "${item.fileName}" and revert data to previous snapshot?`)) {
+                            const ok = storageService.restoreSnapshot(item.previousSnapshot!);
+                            if (ok) {
+                              onDataUpdated({
+                                timetable: storageService.getTimetable(),
+                                rooms: storageService.getRooms(),
+                                holidays: storageService.getHolidays(),
+                                periods: storageService.getPeriods(),
+                                notices: storageService.getNotices(),
+                                branches: storageService.getBranches()
+                              });
+                              setUploadHistory(storageService.getUploadHistory());
+                              onShowToast(`Successfully reverted database to snapshot before "${item.fileName}"`, 'success');
+                            } else {
+                              onShowToast('Failed to revert snapshot', 'error');
+                            }
+                          }
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 border border-amber-200 dark:border-amber-900/60 transition self-start sm:self-auto"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Undo This Upload</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {activeTab === 'overrides' && (

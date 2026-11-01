@@ -42,6 +42,7 @@ export const TimetableEditor: React.FC<TimetableEditorProps> = ({
 }) => {
   const [selectedBranchId, setSelectedBranchId] = useState<BranchId>('CSE');
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>('Monday');
+  const [selectedSemester, setSelectedSemester] = useState<string>('SEM5');
 
   // Modal State for Add / Edit
   const [editingSlot, setEditingSlot] = useState<TimetableSlot | null>(null);
@@ -49,7 +50,9 @@ export const TimetableEditor: React.FC<TimetableEditorProps> = ({
   const [modalSubject, setModalSubject] = useState('');
   const [modalTeacher, setModalTeacher] = useState('');
   const [modalRoomId, setModalRoomId] = useState('');
+  const [modalSemester, setModalSemester] = useState('SEM5');
   const [modalType, setModalType] = useState<ClassType>('Lecture');
+  const [modalIsPublished, setModalIsPublished] = useState(true);
   const [modalNotes, setModalNotes] = useState('');
 
   // Copy routine modal
@@ -59,10 +62,13 @@ export const TimetableEditor: React.FC<TimetableEditorProps> = ({
 
   const selectedBranch = branches.find((b) => b.id === selectedBranchId) || branches[0];
 
-  // Slots for active branch and day
-  const currentSlots = timetable.filter(
-    (s) => s.branch === selectedBranchId && s.day === selectedDay
-  );
+  // Slots for active branch, semester, and day
+  const currentSlots = timetable.filter((s) => {
+    const matchBranch = s.branch === selectedBranchId;
+    const matchDay = s.day === selectedDay;
+    const matchSem = selectedSemester === 'ALL' || !s.semester || s.semester === selectedSemester;
+    return matchBranch && matchDay && matchSem;
+  });
 
   const openSlotEditor = (period: Period, existingSlot?: TimetableSlot) => {
     setTargetPeriod(period);
@@ -71,15 +77,18 @@ export const TimetableEditor: React.FC<TimetableEditorProps> = ({
       setModalSubject(existingSlot.subject);
       setModalTeacher(existingSlot.teacher);
       setModalRoomId(existingSlot.roomId);
+      setModalSemester(existingSlot.semester || selectedSemester === 'ALL' ? 'SEM5' : selectedSemester);
       setModalType(existingSlot.type);
+      setModalIsPublished(existingSlot.is_published !== false);
       setModalNotes(existingSlot.notes || '');
     } else {
       setEditingSlot(null);
       setModalSubject('');
       setModalTeacher('');
-      // Default to first room
       setModalRoomId(rooms[0]?.id || '');
+      setModalSemester(selectedSemester === 'ALL' ? 'SEM5' : selectedSemester);
       setModalType('Lecture');
+      setModalIsPublished(true);
       setModalNotes('');
     }
   };
@@ -88,21 +97,41 @@ export const TimetableEditor: React.FC<TimetableEditorProps> = ({
     e.preventDefault();
     if (!targetPeriod || !modalSubject.trim() || !modalRoomId) return;
 
-    // Check clash: Is this room occupied by another branch on this day and period?
-    const clash = timetable.find(
+    // 1. Room Clash Check: Is this room occupied by another branch on this day and period?
+    const roomClash = timetable.find(
       (s) =>
         s.day === selectedDay &&
         s.periodId === targetPeriod.id &&
-        s.roomId === modalRoomId &&
+        s.roomId.toLowerCase() === modalRoomId.toLowerCase() &&
         s.id !== editingSlot?.id
     );
 
-    if (clash) {
+    if (roomClash) {
       onShowToast(
-        `Clash detected! Room ${modalRoomId} is already booked by ${clash.branch} (${clash.subject})`,
+        `Room Clash! Room ${modalRoomId} is already booked by ${roomClash.branch} (${roomClash.subject})`,
         'error'
       );
       return;
+    }
+
+    // 2. Professor Clash Check: Is this professor already taking another class on this day and period?
+    const cleanTeacher = modalTeacher.trim();
+    if (cleanTeacher && cleanTeacher.toLowerCase() !== 'faculty') {
+      const profClash = timetable.find(
+        (s) =>
+          s.day === selectedDay &&
+          s.periodId === targetPeriod.id &&
+          s.teacher.trim().toLowerCase() === cleanTeacher.toLowerCase() &&
+          s.id !== editingSlot?.id
+      );
+
+      if (profClash) {
+        onShowToast(
+          `Professor Clash! ${cleanTeacher} is already teaching ${profClash.branch} (${profClash.subject}) in room ${profClash.roomId}`,
+          'error'
+        );
+        return;
+      }
     }
 
     if (editingSlot) {
@@ -114,7 +143,9 @@ export const TimetableEditor: React.FC<TimetableEditorProps> = ({
               subject: modalSubject.trim(),
               teacher: modalTeacher.trim() || 'Faculty',
               roomId: modalRoomId,
+              semester: modalSemester,
               type: modalType,
+              is_published: modalIsPublished,
               notes: modalNotes
             }
           : s
@@ -126,12 +157,14 @@ export const TimetableEditor: React.FC<TimetableEditorProps> = ({
       const newSlot: TimetableSlot = {
         id: `slot-${Date.now()}`,
         branch: selectedBranchId,
+        semester: modalSemester,
         day: selectedDay,
         periodId: targetPeriod.id,
         subject: modalSubject.trim(),
         teacher: modalTeacher.trim() || 'Faculty',
         roomId: modalRoomId,
         type: modalType,
+        is_published: modalIsPublished,
         notes: modalNotes
       };
       onSaveTimetable([...timetable, newSlot]);
@@ -139,6 +172,12 @@ export const TimetableEditor: React.FC<TimetableEditorProps> = ({
     }
 
     setTargetPeriod(null);
+  };
+
+  const handlePublishAll = () => {
+    const updated = timetable.map((s) => ({ ...s, is_published: true }));
+    onSaveTimetable(updated);
+    onShowToast('All routine drafts published and live for students', 'success');
   };
 
   const handleDeleteSlot = (id: string) => {
@@ -194,6 +233,28 @@ export const TimetableEditor: React.FC<TimetableEditorProps> = ({
             </select>
           </div>
 
+          {/* Semester Picker */}
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+              Semester
+            </label>
+            <select
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
+            >
+              <option value="ALL">All Semesters</option>
+              <option value="SEM1">Semester 1 (1st Year)</option>
+              <option value="SEM2">Semester 2 (1st Year)</option>
+              <option value="SEM3">Semester 3 (2nd Year)</option>
+              <option value="SEM4">Semester 4 (2nd Year)</option>
+              <option value="SEM5">Semester 5 (3rd Year)</option>
+              <option value="SEM6">Semester 6 (3rd Year)</option>
+              <option value="SEM7">Semester 7 (4th Year)</option>
+              <option value="SEM8">Semester 8 (4th Year)</option>
+            </select>
+          </div>
+
           {/* Day Picker */}
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
@@ -213,14 +274,24 @@ export const TimetableEditor: React.FC<TimetableEditorProps> = ({
           </div>
         </div>
 
-        {/* 1-Click Copy Routine Button */}
-        <button
-          onClick={() => setShowCopyModal(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition self-start sm:self-auto"
-        >
-          <Copy className="w-3.5 h-3.5" />
-          <span>Copy Routine to Another Day/Branch</span>
-        </button>
+        {/* Action Buttons: Publish Drafts & Copy Routine */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={handlePublishAll}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>Publish All Drafts</span>
+          </button>
+
+          <button
+            onClick={() => setShowCopyModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition"
+          >
+            <Copy className="w-3.5 h-3.5" />
+            <span>Copy Routine</span>
+          </button>
+        </div>
       </div>
 
       {/* Editable Periods Grid */}
@@ -263,13 +334,27 @@ export const TimetableEditor: React.FC<TimetableEditorProps> = ({
                     <div className="text-xs text-slate-500 dark:text-slate-400">
                       Faculty: {slot.teacher}
                     </div>
-                    <div className="flex items-center gap-2 pt-1">
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300">
                         {slot.roomId}
                       </span>
                       <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                         {slot.type}
                       </span>
+                      {slot.semester && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+                          {slot.semester}
+                        </span>
+                      )}
+                      {slot.is_published === false ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-400">
+                          Draft
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+                          Live
+                        </span>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -393,6 +478,43 @@ export const TimetableEditor: React.FC<TimetableEditorProps> = ({
                     <option value="Lab">Lab Experiment</option>
                     <option value="Tutorial">Tutorial / Seminar</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Semester & Publish Status */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Semester
+                  </label>
+                  <select
+                    value={modalSemester}
+                    onChange={(e) => setModalSemester(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="SEM1">Semester 1</option>
+                    <option value="SEM2">Semester 2</option>
+                    <option value="SEM3">Semester 3</option>
+                    <option value="SEM4">Semester 4</option>
+                    <option value="SEM5">Semester 5</option>
+                    <option value="SEM6">Semester 6</option>
+                    <option value="SEM7">Semester 7</option>
+                    <option value="SEM8">Semester 8</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center pt-5">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={modalIsPublished}
+                      onChange={(e) => setModalIsPublished(e.target.checked)}
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Publish immediately
+                    </span>
+                  </label>
                 </div>
               </div>
 

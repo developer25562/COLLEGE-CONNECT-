@@ -238,6 +238,14 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
         </div>
       </div>
 
+      {/* PDF / Scanned Image OCR Disclaimer Banner */}
+      <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs">
+        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+        <div className="leading-relaxed">
+          <span className="font-bold">Notice regarding PDF &amp; Scanned Image Timetables:</span> Directly parsing scanned paper photos or PDFs via client-side OCR is experimental and error-prone. For 100% reliable scheduling, strict foreign key validation, and automated conflict detection, please download the official 6-sheet template, transfer your routine details, and upload the spreadsheet here.
+        </div>
+      </div>
+
       {/* Drag & Drop Upload Zone */}
       <div
         onDragOver={handleDragOver}

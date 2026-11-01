@@ -36,6 +36,8 @@ import { BranchTimetable } from './components/BranchTimetable';
 import { RoomAvailability } from './components/RoomAvailability';
 import { HolidayCalendar } from './components/HolidayCalendar';
 import { AdminLayout } from './components/AdminPanel/AdminLayout';
+import { SetupChecker } from './components/SetupChecker';
+import { checkDatabaseSetup, SetupStatus, isSupabaseConfigured } from './services/supabaseClient';
 
 export default function App() {
   // Theme state: defaults to dark mode per design guidelines
@@ -65,6 +67,32 @@ export default function App() {
   const [isSimulated, setIsSimulated] = useState(false);
   const [simulatedDate, setSimulatedDate] = useState<Date>(new Date());
   const [showTimeMachine, setShowTimeMachine] = useState(false);
+
+  // Setup Checker state for Supabase database validation
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
+  const [isCheckingSetup, setIsCheckingSetup] = useState(false);
+  const [bypassSetupChecker, setBypassSetupChecker] = useState(false);
+
+  const runDatabaseProbe = async () => {
+    setIsCheckingSetup(true);
+    try {
+      const res = await checkDatabaseSetup();
+      setSetupStatus(res);
+      if (res.isReady) {
+        setBypassSetupChecker(true);
+      }
+    } catch {
+      // Handled gracefully
+    } finally {
+      setIsCheckingSetup(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'admin' && isSupabaseConfigured) {
+      runDatabaseProbe();
+    }
+  }, [activeTab]);
 
   // Online / Offline Detection
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -322,26 +350,35 @@ export default function App() {
         {/* TAB 5: ADMIN PORTAL */}
         {activeTab === 'admin' && (
           <div className="animate-fade-in">
-            <AdminLayout
-              branches={branches}
-              rooms={rooms}
-              periods={periods}
-              timetable={timetable}
-              holidays={holidays}
-              notices={notices}
-              quickOverrides={quickOverrides}
-              onDataUpdated={(updated) => {
-                if (updated.branches) setBranches(updated.branches);
-                if (updated.rooms) setRooms(updated.rooms);
-                if (updated.periods) setPeriods(updated.periods);
-                if (updated.timetable) setTimetable(updated.timetable);
-                if (updated.holidays) setHolidays(updated.holidays);
-                if (updated.notices) setNotices(updated.notices);
-                if (updated.quickOverrides) setQuickOverrides(updated.quickOverrides);
-              }}
-              onExitAdmin={() => setActiveTab('today')}
-              onShowToast={showToast}
-            />
+            {isSupabaseConfigured && setupStatus && (!setupStatus.isReady || (setupStatus.currentUser && !setupStatus.isAdmin)) && !bypassSetupChecker ? (
+              <SetupChecker
+                status={setupStatus}
+                onRefresh={runDatabaseProbe}
+                onProceedDemo={() => setBypassSetupChecker(true)}
+                isChecking={isCheckingSetup}
+              />
+            ) : (
+              <AdminLayout
+                branches={branches}
+                rooms={rooms}
+                periods={periods}
+                timetable={timetable}
+                holidays={holidays}
+                notices={notices}
+                quickOverrides={quickOverrides}
+                onDataUpdated={(updated) => {
+                  if (updated.branches) setBranches(updated.branches);
+                  if (updated.rooms) setRooms(updated.rooms);
+                  if (updated.periods) setPeriods(updated.periods);
+                  if (updated.timetable) setTimetable(updated.timetable);
+                  if (updated.holidays) setHolidays(updated.holidays);
+                  if (updated.notices) setNotices(updated.notices);
+                  if (updated.quickOverrides) setQuickOverrides(updated.quickOverrides);
+                }}
+                onExitAdmin={() => setActiveTab('today')}
+                onShowToast={showToast}
+              />
+            )}
           </div>
         )}
       </main>

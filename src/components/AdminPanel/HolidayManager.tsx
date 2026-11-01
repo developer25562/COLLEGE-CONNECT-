@@ -21,6 +21,24 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
   const [endDate, setEndDate] = useState('');
   const [type, setType] = useState<HolidayType>('holiday');
   const [description, setDescription] = useState('');
+  const [isWholeCollege, setIsWholeCollege] = useState(true);
+  const [selectedBranches, setSelectedBranches] = useState<string[]>([
+    'CSE',
+    'CSE-AI',
+    'Civil',
+    'Civil-CA',
+    'Mechanical'
+  ]);
+
+  const allBranches = ['CSE', 'CSE-AI', 'Civil', 'Civil-CA', 'Mechanical'];
+
+  const toggleBranch = (b: string) => {
+    if (selectedBranches.includes(b)) {
+      setSelectedBranches(selectedBranches.filter((x) => x !== b));
+    } else {
+      setSelectedBranches([...selectedBranches, b]);
+    }
+  };
 
   const openAdd = () => {
     setEditingHoliday(null);
@@ -30,6 +48,8 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
     setEndDate(todayStr);
     setType('holiday');
     setDescription('');
+    setIsWholeCollege(true);
+    setSelectedBranches(allBranches);
     setShowModal(true);
   };
 
@@ -40,6 +60,8 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
     setEndDate(h.endDate);
     setType(h.type);
     setDescription(h.description || '');
+    setIsWholeCollege(h.is_whole_college !== false);
+    setSelectedBranches(h.branches && h.branches.length > 0 ? h.branches : allBranches);
     setShowModal(true);
   };
 
@@ -58,7 +80,9 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
               startDate,
               endDate: actualEnd,
               type,
-              description: description.trim()
+              description: description.trim(),
+              is_whole_college: isWholeCollege,
+              branches: isWholeCollege ? [] : selectedBranches
             }
           : h
       );
@@ -71,7 +95,9 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
         startDate,
         endDate: actualEnd,
         type,
-        description: description.trim()
+        description: description.trim(),
+        is_whole_college: isWholeCollege,
+        branches: isWholeCollege ? [] : selectedBranches
       };
       onSaveHolidays([...holidays, newHoliday]);
       onShowToast(`Added ${newHoliday.title}`, 'success');
@@ -235,6 +261,48 @@ export const HolidayManager: React.FC<HolidayManagerProps> = ({
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
+              </div>
+
+              {/* Scope: Whole College vs Specific Branches */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isWholeCollege}
+                    onChange={(e) => setIsWholeCollege(e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                    Applies to Whole College (All Branches)
+                  </span>
+                </label>
+
+                {!isWholeCollege && (
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-1">
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      Select Affected Branches:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {allBranches.map((b) => {
+                        const active = selectedBranches.includes(b);
+                        return (
+                          <button
+                            type="button"
+                            key={b}
+                            onClick={() => toggleBranch(b)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                              active
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                            }`}
+                          >
+                            {b}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
