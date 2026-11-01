@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="50%" stop-color="#7C3AED" />
+      <stop offset="100%" stop-color="#0D9488" />
+    </linearGradient>
+    <linearGradient id="cap" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#E2E8F0" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bg)" />
+  <!-- Academic Hat & Schedule Geometry -->
+  <path d="M256 120 L390 190 L256 260 L122 190 Z" fill="url(#cap)" />
+  <path d="M170 220 V310 C170 345 256 375 256 375 C256 375 342 345 342 310 V220 L256 265 Z" fill="#FFFFFF" fill-opacity="0.9" />
+  <circle cx="390" cy="190" r="8" fill="#FDE047" />
+  <path d="M390 198 V280" stroke="#FDE047" stroke-width="8" stroke-linecap="round" />
+  <circle cx="390" cy="285" r="14" fill="#FDE047" />
+  <!-- Pulse / Clock Dial Overlay at bottom -->
+  <circle cx="256" cy="390" r="42" fill="#0F172A" fill-opacity="0.8" stroke="#38BDF8" stroke-width="6" />
+  <polyline points="256,368 256,390 274,390" stroke="#38BDF8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
