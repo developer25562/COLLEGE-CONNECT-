@@ -301,6 +301,7 @@ export default function App() {
                 activePeriod={collegeStatus.activePeriod}
                 currentMinutes={currentMinutes}
                 isOpen={collegeStatus.isOpen}
+                onShowToast={showToast}
               />
             </div>
           </div>
@@ -318,6 +319,7 @@ export default function App() {
               activePeriod={collegeStatus.activePeriod}
               currentMinutes={currentMinutes}
               isOpen={collegeStatus.isOpen}
+              onShowToast={showToast}
             />
           </div>
         )}

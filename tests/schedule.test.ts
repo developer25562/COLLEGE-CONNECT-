@@ -281,3 +281,57 @@ describe('5. Room Availability Derivation', () => {
     expect(r102?.status).toBe('free');
   });
 });
+
+describe('6. Google Calendar ICS Transformation', () => {
+  it('generates valid RFC 5545 VCALENDAR and VEVENT entries for timetable slots', async () => {
+    const { transformTimetableToIcs } = await import('../src/utils/icsGenerator');
+    const ics = transformTimetableToIcs(mockTimetable, mockPeriods, {
+      branchName: 'Computer Science & Engineering',
+      branchId: 'CSE',
+      semester: 'SEM5',
+      collegeName: 'College Connect Institute of Technology',
+      untilDate: new Date('2026-12-31T23:59:59Z')
+    });
+
+    expect(ics).toContain('BEGIN:VCALENDAR');
+    expect(ics).toContain('VERSION:2.0');
+    expect(ics).toContain('X-WR-TIMEZONE:Asia/Kolkata');
+    expect(ics).toContain('BEGIN:VEVENT');
+    expect(ics).toContain('SUMMARY:Distributed Systems (Lecture)');
+    expect(ics).toContain('LOCATION:R101');
+    expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=MO');
+    expect(ics).toContain('TRIGGER:-PT10M');
+    expect(ics).toContain('END:VCALENDAR');
+  });
+});
+
+describe('7. Import & Spreadsheet Validation', () => {
+  it('validates 24-hour time format and rejects malformed strings', async () => {
+    const { isValidTime } = await import('../src/utils/excelEngine');
+    expect(isValidTime('09:00')).toBe(true);
+    expect(isValidTime('14:30')).toBe(true);
+    expect(isValidTime('23:59')).toBe(true);
+    expect(isValidTime('25:00')).toBe(false);
+    expect(isValidTime('09:65')).toBe(false);
+    expect(isValidTime('9:00 AM')).toBe(false);
+    expect(isValidTime('')).toBe(false);
+  });
+
+  it('detects interval overlap for overlapping class timings', () => {
+    // 09:00 to 10:30 overlaps with 10:00 to 11:00
+    const toMin = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+    const overlaps = (s1: string, e1: string, s2: string, e2: string) =>
+      Math.max(toMin(s1), toMin(s2)) < Math.min(toMin(e1), toMin(e2));
+
+    expect(overlaps('09:00', '10:30', '10:00', '11:00')).toBe(true);
+    // Back to back: 09:00 to 09:55 does NOT overlap with 09:55 to 10:50
+    expect(overlaps('09:00', '09:55', '09:55', '10:50')).toBe(false);
+    // Completely separate
+    expect(overlaps('09:00', '10:00', '11:00', '12:00')).toBe(false);
+  });
+});
+
+

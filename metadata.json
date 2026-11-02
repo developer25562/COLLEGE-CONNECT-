@@ -1,6 +1,6 @@
 {
-  "name": "CampusPulse - College Timetable & Room Availability",
-  "description": "Real-time college schedule, classroom & lab availability tracker, holiday calendar, and timetable management system with Excel import.",
+  "name": "College Connect - College Timetable & Room Availability",
+  "description": "Real-time college routine, classroom & lab availability tracker, holiday calendar, and timetable sync with Google Calendar and Supabase.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

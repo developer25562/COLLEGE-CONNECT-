@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Branch, BranchId, DayOfWeek, Period, TimetableSlot } from '../types';
 import { DAYS_OF_WEEK, timeStringToMinutes } from '../utils/timeEngine';
+import { GoogleCalendarSyncModal } from './GoogleCalendarSyncModal';
 
 interface BranchTimetableProps {
   branches: Branch[];
@@ -25,6 +26,7 @@ interface BranchTimetableProps {
   activePeriod?: Period;
   currentMinutes: number;
   isOpen: boolean;
+  onShowToast?: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
 export const BranchTimetable: React.FC<BranchTimetableProps> = ({
@@ -35,10 +37,12 @@ export const BranchTimetable: React.FC<BranchTimetableProps> = ({
   setActiveDay,
   activePeriod,
   currentMinutes,
-  isOpen
+  isOpen,
+  onShowToast
 }) => {
   const [selectedBranchId, setSelectedBranchId] = useState<BranchId>('CSE');
   const [viewMode, setViewMode] = useState<'grid' | 'timeline'>('grid');
+  const [showCalendarModal, setShowCalendarModal] = useState<boolean>(false);
 
   const selectedBranch = branches.find((b) => b.id === selectedBranchId) || branches[0];
 
@@ -181,10 +185,20 @@ export const BranchTimetable: React.FC<BranchTimetableProps> = ({
             {/* Download CSV */}
             <button
               onClick={handleDownloadCSV}
-              title="Download Timetable"
+              title="Download CSV"
               className="p-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition"
             >
               <Download className="w-4 h-4" />
+            </button>
+
+            {/* Google Calendar Sync & ICS Export */}
+            <button
+              onClick={() => setShowCalendarModal(true)}
+              title="Sync Routine with Google Calendar / Export ICS"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shadow-sm transition"
+            >
+              <Calendar className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>Google Calendar</span>
             </button>
           </div>
         </div>
@@ -420,6 +434,18 @@ export const BranchTimetable: React.FC<BranchTimetableProps> = ({
           </div>
         )}
       </div>
+
+      {/* Google Calendar Sync & ICS Modal */}
+      <GoogleCalendarSyncModal
+        isOpen={showCalendarModal}
+        onClose={() => setShowCalendarModal(false)}
+        branches={branches}
+        periods={periods}
+        timetable={timetable}
+        initialBranchId={selectedBranchId}
+        onShowToast={onShowToast}
+      />
     </div>
   );
 };
+
